@@ -1,0 +1,42 @@
+version: '3'
+services:
+
+  web-service:
+    container_name: pizza-service
+    build: ./pizza
+    restart: always
+    env_file:
+    - ./.env
+    ports:
+      - "${SERVER_HOST_PORT}:${SERVER_CONTAINER_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+    
+  postgres:
+    container_name: postgres_container
+    image: postgres:latest
+    command: postgres -c config_file=/etc/postgresql.conf
+    env_file:
+      - ./.env
+    ports:
+      - "${POSTGRES_HOST_PORT}:${POSTGRES_CONTAINER_PORT}"
+    volumes:
+      - ./postgresql.conf:/etc/postgresql.conf
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.27.0.0/16
